@@ -64,15 +64,22 @@ RSpec.describe "StoredFiles", type: :request do
       FactoryBot.create(:stored_file, name: "File5", with_tags: ["Tag3", "Tag4"])
     end
 
+    it "should return an application/json as its content type" do
+      get "/files/+Tag3%20+Tag5/1"
+
+      expect(response.content_type).to eq("application/json")
+    end
+
+    it "should return the status 200 (:ok)" do
+      get "/files/+Tag3/1"
+
+      expect(response).to have_http_status(:ok)
+    end
+
     context "query with only inclusive tags" do
       it "returns the structured information of files that contain all the include tags" do
         get "/files/+Tag3%20+Tag5/1"
 
-        # Make sure the response has the right parameters
-        expect(response.content_type).to eq("application/json")
-        expect(response).to have_http_status(:ok)
-
-        # Build up the json response
         _json_response = JSON.parse(response.body)
 
         # Verify its structure and expected results
@@ -94,11 +101,6 @@ RSpec.describe "StoredFiles", type: :request do
       it "returns the structured information of files that do not contain any of the exclude tags" do
         get "/files/-Tag1%20-Tag2/1"
 
-        # Make sure the response has the right parameters
-        expect(response.content_type).to eq("application/json")
-        expect(response).to have_http_status(:ok)
-
-        # Build up the json response
         _json_response = JSON.parse(response.body)
 
         # Verify its structure and expected results
@@ -117,11 +119,6 @@ RSpec.describe "StoredFiles", type: :request do
       it "returns the structured information of files that contain all the include tags and do not contain any of the exclude tags" do
         get "/files/+Tag2%20+Tag3%20-Tag4/1"
 
-        # Make sure the response has the right parameters
-        expect(response.content_type).to eq("application/json")
-        expect(response).to have_http_status(:ok)
-
-        # Build up the json response
         _json_response = JSON.parse(response.body)
 
         # Verify its structure and expected results
@@ -134,6 +131,29 @@ RSpec.describe "StoredFiles", type: :request do
           {"uuid"=> StoredFile.find_by_name("File3").id, "name" => "File3"},
           {"uuid"=> StoredFile.find_by_name("File1").id, "name" => "File1"}
         ])
+      end
+    end
+
+    context "query with pagination" do
+      before(:each) do
+        FactoryBot.create(:stored_file, name: "File6", with_tags: ["Tag1", "Tag2", "Tag3", "Tag5"])
+        FactoryBot.create(:stored_file, name: "File7", with_tags: ["Tag2"])
+        FactoryBot.create(:stored_file, name: "File8", with_tags: ["Tag2", "Tag3", "Tag5"])
+        FactoryBot.create(:stored_file, name: "File9", with_tags: ["Tag2", "Tag3", "Tag4", "Tag5"])
+        FactoryBot.create(:stored_file, name: "File10", with_tags: ["Tag3", "Tag4"])
+        FactoryBot.create(:stored_file, name: "File11", with_tags: ["Tag5"])
+      end
+
+      it "returns the structured information paginated by what's in the page request parameter" do
+        get "/files/-Tag20/1"
+
+        _json_response = JSON.parse(response.body)
+        expect(_json_response["total_records"]).to eq(10)
+
+        get "/files/-Tag20/2"
+
+        _json_response = JSON.parse(response.body)
+        expect(_json_response["total_records"]).to eq(1)  
       end
     end
   end

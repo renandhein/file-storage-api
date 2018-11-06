@@ -54,7 +54,7 @@ class StoredFilesController < ApplicationController
     if _negative_tags.any?
       _stored_files = _stored_files.where.not(:id => StoredFile.select(:id).joins(:tags).where("tags.name" => _negative_tags))
     end
-    _stored_files = _stored_files.all.to_a
+    _stored_files = _stored_files.page(query_params[:page]).all.to_a
 
     # Find all tags belonging to the found files, but excluding the tags appearing in the search query
     _related_tags = Tag.distinct.joins(:stored_files).where(stored_files: {id: _stored_files.map(&:id)}).where.not(name: (_positive_tags + _negative_tags)).all.to_a
