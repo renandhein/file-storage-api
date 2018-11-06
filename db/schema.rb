@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_11_05_172140) do
+ActiveRecord::Schema.define(version: 2018_11_05_184736) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -22,4 +22,17 @@ ActiveRecord::Schema.define(version: 2018_11_05_172140) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "stored_files_tags", id: false, force: :cascade do |t|
+    t.uuid "stored_file_id", null: false
+    t.bigint "tag_id", null: false
+    t.index ["stored_file_id"], name: "index_stored_files_tags_on_stored_file_id"
+    t.index ["tag_id"], name: "index_stored_files_tags_on_tag_id"
+  end
+
+  create_table "tags", force: :cascade do |t|
+    t.string "name", limit: 100
+  end
+
+  add_foreign_key "stored_files_tags", "stored_files"
+  add_foreign_key "stored_files_tags", "tags"
 end

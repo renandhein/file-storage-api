@@ -7,6 +7,11 @@ en-US:
         restrict_dependent_destroy:
           has_one: "Cannot delete record because a dependent %{record} exists"
           has_many: "Cannot delete record because dependent %{record} exist"
+      models:
+        tag:
+          attributes:
+            name:
+              contains_invalid_characters: "contains invalid characters ('+', '-' or whitespaces are not allowed)"
   date:
     abbr_day_names:
     - Sun
