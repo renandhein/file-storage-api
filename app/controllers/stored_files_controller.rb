@@ -27,7 +27,7 @@ class StoredFilesController < ApplicationController
     end
 
     # If there are any pending errors in the file or in the tags, don't save
-    # and return the errors
+    # and return all the errors
     if _errors.none? && _stored_file.save
       render(json: {"uuid": _stored_file.id}, status: :created)
     else
@@ -35,8 +35,53 @@ class StoredFilesController < ApplicationController
     end
   end
 
+  def files
+    _positive_tags = []
+    _negative_tags = []
+
+    # Separate the search query into positive and negative tags to be used in the query
+    query_params["tag_query_search"].split(" ").each do |_tag|
+      _positive_tags << _tag[1..-1] if _tag.starts_with?("+")
+      _negative_tags << _tag[1..-1] if _tag.starts_with?("-")
+    end
+
+    # Assemble the query based on which types of parameters exist so it works
+    # whether we have both or only one of them
+    _stored_files = StoredFile.distinct.joins(:tags)
+    if _positive_tags.any?
+      _stored_files = _stored_files.where("tags.name" => _positive_tags).group("stored_files.id").having("COUNT(stored_files.id) = ?", _positive_tags.size)
+    end
+    if _negative_tags.any?
+      _stored_files = _stored_files.where.not(:id => StoredFile.select(:id).joins(:tags).where("tags.name" => _negative_tags))
+    end
+    _stored_files = _stored_files.all.to_a
+
+    # Find all tags belonging to the found files, but excluding the tags appearing in the search query
+    _related_tags = Tag.distinct.joins(:stored_files).where(stored_files: {id: _stored_files.map(&:id)}).where.not(name: (_positive_tags + _negative_tags)).all.to_a
+
+    render(json: {
+      "total_records": _stored_files.size,
+      "related_tags": _related_tags.map do |_tag|
+        {
+          "tag" => _tag.name,
+          "file_count" => _tag.stored_files.where(stored_files: {id: _stored_files.map(&:id)}).count
+        }
+      end,
+      "records": _stored_files.map do |_stored_file|
+        {
+          "uuid" => _stored_file.id,
+          "name" => _stored_file.name
+        }
+      end
+    }, status: :ok)
+  end
+
   private
     def file_params
       params.permit(:name, tags: [])
+    end
+
+    def query_params
+      params.permit(:tag_query_search, :page)
     end
 end
